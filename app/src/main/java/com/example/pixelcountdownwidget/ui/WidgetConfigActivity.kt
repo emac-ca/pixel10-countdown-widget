@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.pixelcountdownwidget.BuildConfig
 import com.example.pixelcountdownwidget.PixelCountdownApp
 import com.example.pixelcountdownwidget.data.TimerEntity
 import com.example.pixelcountdownwidget.widget.TimerWidgetUpdater
@@ -72,6 +73,13 @@ fun WidgetConfigScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            Text(
+                text = "Version ${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.labelMedium
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             if (timers.isEmpty()) {
                 Text("No timers yet.")
             } else {
