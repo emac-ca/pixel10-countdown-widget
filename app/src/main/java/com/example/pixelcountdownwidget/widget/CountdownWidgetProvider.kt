@@ -3,6 +3,7 @@ package com.example.pixelcountdownwidget.widget
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.util.TypedValue
 import android.widget.RemoteViews
 import com.example.pixelcountdownwidget.PixelCountdownApp
 import com.example.pixelcountdownwidget.R
@@ -27,21 +28,35 @@ class CountdownWidgetProvider : AppWidgetProvider() {
             dao.getSelectedForWidget().first()
         }
 
-        val views = RemoteViews(context.packageName, R.layout.widget_countdown)
-
-        if (selectedTimers.isEmpty()) {
-            views.setTextViewText(R.id.widget_label, "No timers")
-            views.setTextViewText(R.id.widget_time, "--")
-        } else {
-            val summary = selectedTimers.take(3).joinToString("\n") { timer ->
-                "${timer.label}: ${formatTimerValue(timer)}"
+        appWidgetIds.forEach { appWidgetId ->
+            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 72)
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 72)
+            val textSize = when {
+                minWidth < 90 || minHeight < 90 -> 9f
+                minWidth < 150 || minHeight < 120 -> 11f
+                minWidth < 220 || minHeight < 160 -> 13f
+                else -> 15f
             }
 
-            views.setTextViewText(R.id.widget_label, "")
-            views.setTextViewText(R.id.widget_time, summary)
-        }
+            val views = RemoteViews(context.packageName, R.layout.widget_countdown)
+            views.setTextViewTextSize(R.id.widget_label, TypedValue.COMPLEX_UNIT_SP, textSize)
+            views.setTextViewTextSize(R.id.widget_time, TypedValue.COMPLEX_UNIT_SP, textSize)
 
-        appWidgetManager.updateAppWidget(appWidgetIds, views)
+            if (selectedTimers.isEmpty()) {
+                views.setTextViewText(R.id.widget_label, "No timers")
+                views.setTextViewText(R.id.widget_time, "--")
+            } else {
+                val summary = selectedTimers.take(3).joinToString("\n") { timer ->
+                    "${timer.label}: ${formatTimerValue(timer)}"
+                }
+
+                views.setTextViewText(R.id.widget_label, "")
+                views.setTextViewText(R.id.widget_time, summary)
+            }
+
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
     }
 }
 

@@ -63,9 +63,9 @@ fun TimerApp(viewModel: TimerViewModel) {
 
     val zoneOptions = remember(zoneText) {
         ZoneId.getAvailableZoneIds()
-            .filter { it.contains(zoneText, ignoreCase = true) || zoneText.isBlank() }
+            .filter { zoneText.isBlank() || it.contains(zoneText, ignoreCase = true) }
             .sorted()
-            .take(30)
+            .take(40)
     }
 
     val datePickerState = rememberDatePickerState(
@@ -128,12 +128,24 @@ fun TimerApp(viewModel: TimerViewModel) {
             ) {
                 OutlinedTextField(
                     value = zoneText,
-                    onValueChange = {
-                        viewModel.setZoneInput(it)
+                    onValueChange = { value ->
+                        viewModel.setZoneInput(value)
                         zoneExpanded = true
                     },
                     label = { Text("Time zone") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = zoneExpanded) },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (zoneText.isNotBlank()) {
+                                TextButton(onClick = {
+                                    viewModel.setZoneInput("")
+                                    zoneExpanded = true
+                                }) {
+                                    Text("Clear")
+                                }
+                            }
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = zoneExpanded)
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor()
