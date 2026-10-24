@@ -28,7 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.pixelcountdownwidget.BuildConfig
+import com.example.pixelcountdownwidget.APP_VERSION_NAME
 import com.example.pixelcountdownwidget.PixelCountdownApp
 import com.example.pixelcountdownwidget.data.TimerEntity
 import com.example.pixelcountdownwidget.widget.TimerWidgetUpdater
@@ -74,7 +74,7 @@ fun WidgetConfigScreen(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Version ${BuildConfig.VERSION_NAME}",
+                text = "Version $APP_VERSION_NAME",
                 style = MaterialTheme.typography.labelMedium
             )
 
