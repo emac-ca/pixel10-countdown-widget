@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +24,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,6 +40,7 @@ fun TimerApp(viewModel: TimerViewModel) {
     val timers by viewModel.timers.collectAsState(initial = emptyList())
     val label by viewModel.newLabel.collectAsState()
     val mode by viewModel.newMode.collectAsState()
+    val zoneText by viewModel.zoneInput.collectAsState()
     val dateText by viewModel.dateText.collectAsState()
     val timeText by viewModel.timeText.collectAsState()
 
@@ -56,6 +59,15 @@ fun TimerApp(viewModel: TimerViewModel) {
                 value = label,
                 onValueChange = { viewModel.setLabel(it) },
                 label = { Text("Timer label") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = zoneText,
+                onValueChange = { viewModel.setZoneInput(it) },
+                label = { Text("Time zone (e.g. America/New_York)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -118,7 +130,11 @@ fun TimerApp(viewModel: TimerViewModel) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(timers) { timer ->
-                    TimerRow(timer = timer, onDelete = { viewModel.deleteTimer(timer) })
+                    TimerRow(
+                        timer = timer,
+                        onToggleWidget = { viewModel.toggleWidgetSelection(timer) },
+                        onDelete = { viewModel.deleteTimer(timer) }
+                    )
                 }
             }
         }
@@ -126,7 +142,7 @@ fun TimerApp(viewModel: TimerViewModel) {
 }
 
 @Composable
-fun TimerRow(timer: TimerEntity, onDelete: () -> Unit) {
+fun TimerRow(timer: TimerEntity, onToggleWidget: () -> Unit, onDelete: () -> Unit) {
     val state = computeState(timer, Instant.now())
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -134,9 +150,10 @@ fun TimerRow(timer: TimerEntity, onDelete: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(timer.label, fontWeight = FontWeight.Bold)
                 Text(
                     text = when (timer.mode) {
@@ -147,8 +164,17 @@ fun TimerRow(timer: TimerEntity, onDelete: () -> Unit) {
                 Text(state.displayText)
             }
 
-            TextButton(onClick = onDelete) {
-                Text("Delete")
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Widget")
+                Checkbox(
+                    checked = timer.selectedForWidget,
+                    onCheckedChange = { onToggleWidget() }
+                )
+                TextButton(onClick = onDelete) {
+                    Text("Delete")
+                }
             }
         }
     }

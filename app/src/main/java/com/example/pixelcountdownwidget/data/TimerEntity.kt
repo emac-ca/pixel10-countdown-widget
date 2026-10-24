@@ -14,6 +14,7 @@ data class TimerEntity(
     val startInstantEpochMillis: Long,
     val targetInstantEpochMillis: Long?,
     val zoneId: String,
+    val selectedForWidget: Boolean = false,
     val createdAtEpochMillis: Long = System.currentTimeMillis()
 ) {
     fun zone(): ZoneId = ZoneId.of(zoneId)

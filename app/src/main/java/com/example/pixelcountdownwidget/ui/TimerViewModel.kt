@@ -32,6 +32,9 @@ class TimerViewModel(
     private val _selectedZone = MutableStateFlow(ZoneId.systemDefault())
     val selectedZone: StateFlow<ZoneId> = _selectedZone
 
+    private val _zoneInput = MutableStateFlow(ZoneId.systemDefault().id)
+    val zoneInput: StateFlow<String> = _zoneInput
+
     private val _dateText = MutableStateFlow("")
     val dateText: StateFlow<String> = _dateText
 
@@ -54,6 +57,11 @@ class TimerViewModel(
         _selectedZone.value = zone
     }
 
+    fun setZoneInput(value: String) {
+        _zoneInput.value = value
+        runCatching { ZoneId.of(value) }.onSuccess { _selectedZone.value = it }
+    }
+
     fun setDate(value: String) {
         _dateText.value = value
     }
@@ -70,12 +78,13 @@ class TimerViewModel(
         val time = _timeText.value
         if (date.isBlank() || time.isBlank()) return
 
+        val zone = _selectedZone.value
         val localDateTime = LocalDateTime.parse(
             "$date $time",
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
         )
 
-        val zoned = ZonedDateTime.of(localDateTime, _selectedZone.value)
+        val zoned = ZonedDateTime.of(localDateTime, zone)
         val instant = zoned.toInstant()
 
         val entity = TimerEntity(
@@ -83,13 +92,22 @@ class TimerViewModel(
             mode = _newMode.value.name,
             startInstantEpochMillis = if (_newMode.value == TimerMode.UP) instant.toEpochMilli() else System.currentTimeMillis(),
             targetInstantEpochMillis = if (_newMode.value == TimerMode.DOWN) instant.toEpochMilli() else null,
-            zoneId = _selectedZone.value.id
+            zoneId = zone.id,
+            selectedForWidget = false
         )
 
         viewModelScope.launch {
             dao.insert(entity)
             TimerWidgetUpdater.updateWidgetNow()
             clearFields()
+        }
+    }
+
+    fun toggleWidgetSelection(entity: TimerEntity) {
+        viewModelScope.launch {
+            val updated = entity.copy(selectedForWidget = !entity.selectedForWidget)
+            dao.update(updated)
+            TimerWidgetUpdater.updateWidgetNow()
         }
     }
 

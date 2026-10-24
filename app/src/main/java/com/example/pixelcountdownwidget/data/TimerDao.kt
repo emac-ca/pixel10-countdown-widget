@@ -13,6 +13,9 @@ interface TimerDao {
     @Query("SELECT * FROM timers ORDER BY createdAtEpochMillis DESC")
     fun getAll(): Flow<List<TimerEntity>>
 
+    @Query("SELECT * FROM timers WHERE selectedForWidget = 1 ORDER BY createdAtEpochMillis DESC")
+    fun getSelectedForWidget(): Flow<List<TimerEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(timer: TimerEntity): Long
 

@@ -23,33 +23,36 @@ class CountdownWidgetProvider : AppWidgetProvider() {
         val app = context.applicationContext as? PixelCountdownApp ?: return
         val dao = app.database.timerDao()
 
-        val timerList = runBlocking {
-            dao.getAll().first()
+        val selectedTimers = runBlocking {
+            dao.getSelectedForWidget().first()
         }
 
-        val timer = timerList.firstOrNull()
         val views = RemoteViews(context.packageName, R.layout.widget_countdown)
 
-        if (timer == null) {
+        if (selectedTimers.isEmpty()) {
             views.setTextViewText(R.id.widget_label, "No timers")
             views.setTextViewText(R.id.widget_time, "--")
         } else {
-            val state = when (timer.mode) {
-                "UP" -> {
-                    val diff = Duration.between(timer.startInstant(), Instant.now())
-                    val totalSeconds = if (diff.isNegative) 0 else diff.seconds
-                    formatSeconds(totalSeconds)
+            val summary = selectedTimers.take(3).joinToString(" / ") { timer ->
+                val value = when (timer.mode) {
+                    "UP" -> {
+                        val diff = Duration.between(timer.startInstant(), Instant.now())
+                        val totalSeconds = if (diff.isNegative) 0 else diff.seconds
+                        formatSeconds(totalSeconds)
+                    }
+                    else -> {
+                        val target = timer.targetInstant() ?: Instant.now()
+                        val diff = Duration.between(Instant.now(), target)
+                        val totalSeconds = if (diff.isNegative) 0 else diff.seconds
+                        formatSeconds(totalSeconds)
+                    }
                 }
-                else -> {
-                    val target = timer.targetInstant() ?: Instant.now()
-                    val diff = Duration.between(Instant.now(), target)
-                    val totalSeconds = if (diff.isNegative) 0 else diff.seconds
-                    formatSeconds(totalSeconds)
-                }
+                "${timer.label}: $value"
             }
 
-            views.setTextViewText(R.id.widget_label, timer.label)
-            views.setTextViewText(R.id.widget_time, state)
+            val labelText = if (selectedTimers.size > 1) "${selectedTimers.size} timers" else selectedTimers.first().label
+            views.setTextViewText(R.id.widget_label, labelText)
+            views.setTextViewText(R.id.widget_time, summary)
         }
 
         appWidgetManager.updateAppWidget(appWidgetIds, views)
