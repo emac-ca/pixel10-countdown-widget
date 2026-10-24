@@ -33,25 +33,11 @@ class CountdownWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_label, "No timers")
             views.setTextViewText(R.id.widget_time, "--")
         } else {
-            val summary = selectedTimers.take(3).joinToString(" / ") { timer ->
-                val value = when (timer.mode) {
-                    "UP" -> {
-                        val diff = Duration.between(timer.startInstant(), Instant.now())
-                        val totalSeconds = if (diff.isNegative) 0 else diff.seconds
-                        formatSeconds(totalSeconds)
-                    }
-                    else -> {
-                        val target = timer.targetInstant() ?: Instant.now()
-                        val diff = Duration.between(Instant.now(), target)
-                        val totalSeconds = if (diff.isNegative) 0 else diff.seconds
-                        formatSeconds(totalSeconds)
-                    }
-                }
-                "${timer.label}: $value"
+            val summary = selectedTimers.take(3).joinToString("\n") { timer ->
+                "${timer.label}: ${formatTimerValue(timer)}"
             }
 
-            val labelText = if (selectedTimers.size > 1) "${selectedTimers.size} timers" else selectedTimers.first().label
-            views.setTextViewText(R.id.widget_label, labelText)
+            views.setTextViewText(R.id.widget_label, "")
             views.setTextViewText(R.id.widget_time, summary)
         }
 
@@ -59,16 +45,48 @@ class CountdownWidgetProvider : AppWidgetProvider() {
     }
 }
 
-private fun formatSeconds(totalSeconds: Long): String {
-    val days = totalSeconds / 86400
-    val hours = (totalSeconds % 86400) / 3600
-    val mins = (totalSeconds % 3600) / 60
-    val secs = totalSeconds % 60
+private fun formatTimerValue(timer: TimerEntity): String {
+    val now = Instant.now()
+    val totalSeconds = when (timer.mode) {
+        "UP" -> {
+            val diff = Duration.between(timer.startInstant(), now)
+            if (diff.isNegative) 0L else diff.seconds
+        }
+        else -> {
+            val target = timer.targetInstant() ?: now
+            val diff = Duration.between(now, target)
+            if (diff.isNegative) 0L else diff.seconds
+        }
+    }
+
+    return formatSmartDuration(totalSeconds)
+}
+
+private fun formatSmartDuration(totalSeconds: Long): String {
+    if (totalSeconds <= 0L) return "0s"
+
+    val minutes = totalSeconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+    val weeks = days / 7
 
     return when {
-        days > 0 -> "${days}d ${hours}h"
-        hours > 0 -> "${hours}h ${mins}m"
-        mins > 0 -> "${mins}m ${secs}s"
-        else -> "${secs}s"
+        weeks > 0 -> {
+            val remainingDays = days % 7
+            if (remainingDays > 0) "${weeks}w ${remainingDays}d" else "${weeks}w"
+        }
+        days > 0 -> {
+            val remainingHours = hours % 24
+            if (remainingHours > 0) "${days}d ${remainingHours}h" else "${days}d"
+        }
+        hours > 0 -> {
+            val remainingMinutes = minutes % 60
+            if (remainingMinutes > 0) "${hours}h ${remainingMinutes}m" else "${hours}h"
+        }
+        minutes > 0 -> {
+            val remainingSeconds = totalSeconds % 60
+            if (remainingSeconds > 0) "${minutes}m ${remainingSeconds}s" else "${minutes}m"
+        }
+        else -> "${totalSeconds}s"
     }
 }
