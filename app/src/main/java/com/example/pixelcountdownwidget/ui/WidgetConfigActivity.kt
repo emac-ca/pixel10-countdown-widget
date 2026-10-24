@@ -23,10 +23,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
 import com.example.pixelcountdownwidget.PixelCountdownApp
 import com.example.pixelcountdownwidget.data.TimerEntity
 import com.example.pixelcountdownwidget.widget.TimerWidgetUpdater
@@ -57,6 +57,7 @@ fun WidgetConfigScreen(
     onSave: () -> Unit
 ) {
     val timers by dao.getAll().collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -79,7 +80,7 @@ fun WidgetConfigScreen(
                         TimerSelectionRow(
                             timer = timer,
                             onToggle = {
-                                lifecycleScope.launch {
+                                scope.launch {
                                     dao.update(timer.copy(selectedForWidget = !timer.selectedForWidget))
                                 }
                             }

@@ -1,4 +1,4 @@
-package com.example.pixelcountdownwidget
+package com.example.pixelcountdownwidget.widget
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -6,9 +6,12 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import com.example.pixelcountdownwidget.widget.CountdownWidgetProvider
 
 object TimerWidgetUpdater {
+    fun updateWidgetNow() {
+        // no-op placeholder until a Context is available
+    }
+
     fun updateWidgetNow(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
         val component = ComponentName(context, CountdownWidgetProvider::class.java)
@@ -36,11 +39,11 @@ object TimerWidgetUpdater {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val nextMinute = (System.currentTimeMillis() / 60000L + 1L) * 60000L
+        val nextMinute = (System.currentTimeMillis() / 60_000L + 1L) * 60_000L
         alarmManager.setInexactRepeating(
             AlarmManager.RTC_WAKEUP,
             nextMinute,
-            AlarmManager.INTERVAL_MINUTE,
+            60_000L,
             pendingIntent
         )
     }
