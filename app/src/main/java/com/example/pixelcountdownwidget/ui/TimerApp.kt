@@ -26,10 +26,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import android.content.Intent
 import com.example.pixelcountdownwidget.data.TimerEntity
 import com.example.pixelcountdownwidget.model.TimerMode
 import java.time.Duration
@@ -39,7 +37,6 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimerApp(viewModel: TimerViewModel) {
-    val context = LocalContext.current
     val timers by viewModel.timers.collectAsState(initial = emptyList())
     val label by viewModel.newLabel.collectAsState()
     val mode by viewModel.newMode.collectAsState()
@@ -58,18 +55,6 @@ fun TimerApp(viewModel: TimerViewModel) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            Button(
-                onClick = {
-                    val intent = Intent(context, WidgetConfigActivity::class.java)
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Widget configuration")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             OutlinedTextField(
                 value = label,
                 onValueChange = { viewModel.setLabel(it) },
@@ -205,27 +190,42 @@ fun computeState(timer: TimerEntity, now: Instant): TimerDisplayState {
         "UP" -> {
             val diff = Duration.between(timer.startInstant(), now)
             val secs = if (diff.isNegative) 0 else diff.seconds
-            TimerDisplayState(displayText = formatSeconds(secs))
+            TimerDisplayState(displayText = formatSmartDuration(secs))
         }
         else -> {
             val target = timer.targetInstant() ?: now
             val diff = Duration.between(now, target)
             val secs = if (diff.isNegative) 0 else diff.seconds
-            TimerDisplayState(displayText = formatSeconds(secs), isFinished = diff.isNegative)
+            TimerDisplayState(displayText = formatSmartDuration(secs), isFinished = diff.isNegative)
         }
     }
 }
 
-fun formatSeconds(totalSeconds: Long): String {
-    val days = totalSeconds / 86400
-    val hours = (totalSeconds % 86400) / 3600
-    val mins = (totalSeconds % 3600) / 60
-    val secs = totalSeconds % 60
+fun formatSmartDuration(totalSeconds: Long): String {
+    if (totalSeconds <= 0L) return "0s"
+
+    val minutes = totalSeconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+    val weeks = days / 7
 
     return when {
-        days > 0 -> "${days}d ${hours}h ${mins}m"
-        hours > 0 -> "${hours}h ${mins}m ${secs}s"
-        mins > 0 -> "${mins}m ${secs}s"
-        else -> "${secs}s"
+        weeks > 0 -> {
+            val remainingDays = days % 7
+            if (remainingDays > 0) "${weeks}w ${remainingDays}d" else "${weeks}w"
+        }
+        days > 0 -> {
+            val remainingHours = hours % 24
+            if (remainingHours > 0) "${days}d ${remainingHours}h" else "${days}d"
+        }
+        hours > 0 -> {
+            val remainingMinutes = minutes % 60
+            if (remainingMinutes > 0) "${hours}h ${remainingMinutes}m" else "${hours}h"
+        }
+        minutes > 0 -> {
+            val remainingSeconds = totalSeconds % 60
+            if (remainingSeconds > 0) "${minutes}m ${remainingSeconds}s" else "${minutes}m"
+        }
+        else -> "${totalSeconds}s"
     }
 }
