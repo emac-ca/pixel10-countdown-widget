@@ -26,8 +26,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.content.Intent
 import com.example.pixelcountdownwidget.data.TimerEntity
 import com.example.pixelcountdownwidget.model.TimerMode
 import java.time.Duration
@@ -37,6 +39,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimerApp(viewModel: TimerViewModel) {
+    val context = LocalContext.current
     val timers by viewModel.timers.collectAsState(initial = emptyList())
     val label by viewModel.newLabel.collectAsState()
     val mode by viewModel.newMode.collectAsState()
@@ -55,6 +58,18 @@ fun TimerApp(viewModel: TimerViewModel) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            Button(
+                onClick = {
+                    val intent = Intent(context, WidgetConfigActivity::class.java)
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Widget configuration")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = label,
                 onValueChange = { viewModel.setLabel(it) },
