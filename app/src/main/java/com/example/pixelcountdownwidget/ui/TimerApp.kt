@@ -13,25 +13,37 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.pixelcountdownwidget.APP_VERSION_NAME
 import com.example.pixelcountdownwidget.data.TimerEntity
-import com.example.pixelcountdownwidget.model.TimerMode
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,10 +51,42 @@ import java.time.format.DateTimeFormatter
 fun TimerApp(viewModel: TimerViewModel) {
     val timers by viewModel.timers.collectAsState(initial = emptyList())
     val label by viewModel.newLabel.collectAsState()
-    val mode by viewModel.newMode.collectAsState()
     val zoneText by viewModel.zoneInput.collectAsState()
     val dateText by viewModel.dateText.collectAsState()
     val timeText by viewModel.timeText.collectAsState()
+
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedTime by remember { mutableStateOf(LocalTime.of(9, 0)) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var zoneExpanded by remember { mutableStateOf(false) }
+
+    val zoneOptions = remember(zoneText) {
+        ZoneId.getAvailableZoneIds()
+            .filter { it.contains(zoneText, ignoreCase = true) || zoneText.isBlank() }
+            .sorted()
+            .take(30)
+    }
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault().rules.getOffset(Instant.now())).toInstant().toEpochMilli()
+    )
+    val timePickerState = rememberTimePickerState(
+        initialHour = selectedTime.hour,
+        initialMinute = selectedTime.minute,
+        is24Hour = true
+    )
+
+    fun applyPickedDate() {
+        val millis = datePickerState.selectedDateMillis ?: System.currentTimeMillis()
+        selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+        viewModel.setDate(selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+    }
+
+    fun applyPickedTime() {
+        selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
+        viewModel.setTime(selectedTime.format(DateTimeFormatter.ofPattern("HH:mm")))
+    }
 
     Scaffold(
         topBar = {
@@ -55,6 +99,13 @@ fun TimerApp(viewModel: TimerViewModel) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            Text(
+                text = "Version $APP_VERSION_NAME",
+                style = MaterialTheme.typography.labelMedium
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             OutlinedTextField(
                 value = label,
                 onValueChange = { viewModel.setLabel(it) },
@@ -64,12 +115,45 @@ fun TimerApp(viewModel: TimerViewModel) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(
-                value = zoneText,
-                onValueChange = { viewModel.setZoneInput(it) },
-                label = { Text("Time zone (e.g. America/New_York)") },
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "Mode: automatic (future = count down, past = count up)",
+                style = MaterialTheme.typography.bodySmall
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ExposedDropdownMenuBox(
+                expanded = zoneExpanded,
+                onExpandedChange = { zoneExpanded = !zoneExpanded }
+            ) {
+                OutlinedTextField(
+                    value = zoneText,
+                    onValueChange = {
+                        viewModel.setZoneInput(it)
+                        zoneExpanded = true
+                    },
+                    label = { Text("Time zone") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = zoneExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = zoneExpanded,
+                    onDismissRequest = { zoneExpanded = false }
+                ) {
+                    zoneOptions.forEach { option ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                viewModel.setZone(ZoneId.of(option))
+                                zoneExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -77,35 +161,20 @@ fun TimerApp(viewModel: TimerViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(
-                    selected = mode == TimerMode.DOWN,
-                    onClick = { viewModel.setMode(TimerMode.DOWN) },
-                    label = { Text("Count Down") }
-                )
-                FilterChip(
-                    selected = mode == TimerMode.UP,
-                    onClick = { viewModel.setMode(TimerMode.UP) },
-                    label = { Text("Count Up") }
-                )
+                Button(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = if (dateText.isBlank()) "Pick date" else dateText)
+                }
+
+                Button(
+                    onClick = { showTimePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = if (timeText.isBlank()) "Pick time" else timeText)
+                }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = dateText,
-                onValueChange = { viewModel.setDate(it) },
-                label = { Text("Date (yyyy-MM-dd)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = timeText,
-                onValueChange = { viewModel.setTime(it) },
-                label = { Text("Time (HH:mm)") },
-                modifier = Modifier.fillMaxWidth()
-            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -126,9 +195,7 @@ fun TimerApp(viewModel: TimerViewModel) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(timers) { timer ->
                     TimerRow(
                         timer = timer,
@@ -138,6 +205,54 @@ fun TimerApp(viewModel: TimerViewModel) {
                 }
             }
         }
+    }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        applyPickedDate()
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTimePicker) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Select time") },
+            text = {
+                TimePicker(state = timePickerState)
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        applyPickedTime()
+                        showTimePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -164,9 +279,7 @@ fun TimerRow(timer: TimerEntity, onToggleWidget: () -> Unit, onDelete: () -> Uni
                 Text(state.displayText)
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Widget")
                 Checkbox(
                     checked = timer.selectedForWidget,

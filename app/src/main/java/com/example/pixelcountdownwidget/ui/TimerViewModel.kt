@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.pixelcountdownwidget.data.TimerDao
 import com.example.pixelcountdownwidget.data.TimerEntity
 import com.example.pixelcountdownwidget.model.TimerMode
-import com.example.pixelcountdownwidget.widget.TimerWidgetUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,9 +24,6 @@ class TimerViewModel(
 
     private val _newLabel = MutableStateFlow("")
     val newLabel: StateFlow<String> = _newLabel
-
-    private val _newMode = MutableStateFlow(TimerMode.DOWN)
-    val newMode: StateFlow<TimerMode> = _newMode
 
     private val _selectedZone = MutableStateFlow(ZoneId.systemDefault())
     val selectedZone: StateFlow<ZoneId> = _selectedZone
@@ -49,12 +45,9 @@ class TimerViewModel(
         _newLabel.value = value
     }
 
-    fun setMode(value: TimerMode) {
-        _newMode.value = value
-    }
-
     fun setZone(zone: ZoneId) {
         _selectedZone.value = zone
+        _zoneInput.value = zone.id
     }
 
     fun setZoneInput(value: String) {
@@ -84,45 +77,42 @@ class TimerViewModel(
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
         )
 
-        val zoned = ZonedDateTime.of(localDateTime, zone)
-        val instant = zoned.toInstant()
+        val targetInstant = ZonedDateTime.of(localDateTime, zone).toInstant()
+        val mode = if (targetInstant.isBefore(Instant.now())) TimerMode.UP else TimerMode.DOWN
 
         val entity = TimerEntity(
             label = label,
-            mode = _newMode.value.name,
-            startInstantEpochMillis = if (_newMode.value == TimerMode.UP) instant.toEpochMilli() else System.currentTimeMillis(),
-            targetInstantEpochMillis = if (_newMode.value == TimerMode.DOWN) instant.toEpochMilli() else null,
+            mode = mode.name,
+            startInstantEpochMillis = if (mode == TimerMode.UP) targetInstant.toEpochMilli() else System.currentTimeMillis(),
+            targetInstantEpochMillis = if (mode == TimerMode.DOWN) targetInstant.toEpochMilli() else null,
             zoneId = zone.id,
             selectedForWidget = false
         )
 
         viewModelScope.launch {
             dao.insert(entity)
-            TimerWidgetUpdater.updateWidgetNow()
             clearFields()
-        }
-    }
-
-    fun toggleWidgetSelection(entity: TimerEntity) {
-        viewModelScope.launch {
-            val updated = entity.copy(selectedForWidget = !entity.selectedForWidget)
-            dao.update(updated)
-            TimerWidgetUpdater.updateWidgetNow()
         }
     }
 
     fun deleteTimer(entity: TimerEntity) {
         viewModelScope.launch {
             dao.delete(entity)
-            TimerWidgetUpdater.updateWidgetNow()
+        }
+    }
+
+    fun toggleWidgetSelection(entity: TimerEntity) {
+        viewModelScope.launch {
+            dao.update(entity.copy(selectedForWidget = !entity.selectedForWidget))
         }
     }
 
     private fun clearFields() {
         _newLabel.value = ""
-        _newMode.value = TimerMode.DOWN
         _dateText.value = ""
         _timeText.value = "00:00"
+        _zoneInput.value = ZoneId.systemDefault().id
+        _selectedZone.value = ZoneId.systemDefault()
     }
 }
 
