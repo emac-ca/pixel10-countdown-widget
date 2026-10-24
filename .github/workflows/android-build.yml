@@ -23,6 +23,26 @@ jobs:
           java-version: '17'
           cache: gradle
 
+      - name: Install Android command line tools
+        run: |
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd "$ANDROID_HOME"
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cl.zip
+          unzip -q cl.zip
+          rm -f cl.zip
+          if [ -d "$ANDROID_HOME/cmdline-tools/latest" ]; then
+            echo "cmdline-tools already installed"
+          else
+            mv cmdline-tools "$ANDROID_HOME/cmdline-tools-unpacked"
+            mkdir -p "$ANDROID_HOME/cmdline-tools"
+            mv "$ANDROID_HOME/cmdline-tools-unpacked" "$ANDROID_HOME/cmdline-tools/latest"
+          fi
+
+      - name: Install Android SDK packages
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
       - name: Generate Gradle wrapper if missing
         run: |
           if [ ! -f gradlew ]; then
@@ -37,18 +57,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add gradlew gradlew.bat gradle/wrapper 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Generate Gradle wrapper"
-          git push
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install required Android SDK packages
-        run: |
-          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses
+          git diff --cached --quiet || git commit -m "Generate Gradle wrapper" || true
+          git push || true
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
