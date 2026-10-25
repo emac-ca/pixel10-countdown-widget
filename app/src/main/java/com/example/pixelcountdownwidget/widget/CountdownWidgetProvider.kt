@@ -20,7 +20,24 @@ class CountdownWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
+        updateWidgets(context, appWidgetManager, appWidgetIds)
+    }
 
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: android.os.Bundle
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        updateWidgets(context, appWidgetManager, intArrayOf(appWidgetId))
+    }
+
+    private fun updateWidgets(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
         val app = context.applicationContext as? PixelCountdownApp ?: return
         val dao = app.database.timerDao()
 
