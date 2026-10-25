@@ -15,11 +15,7 @@
         android:textStyle="bold"
         android:maxLines="1"
         android:ellipsize="end"
-        android:includeFontPadding="false"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="8sp"
-        android:autoSizeMaxTextSize="18sp"
-        android:autoSizeStepGranularity="1sp" />
+        android:includeFontPadding="false" />
 
     <TextView
         android:id="@+id/widget_time"
@@ -32,9 +28,5 @@
         android:lineSpacingExtra="2dp"
         android:ellipsize="end"
         android:singleLine="false"
-        android:includeFontPadding="false"
-        android:autoSizeTextType="uniform"
-        android:autoSizeMinTextSize="8sp"
-        android:autoSizeMaxTextSize="18sp"
-        android:autoSizeStepGranularity="1sp" />
+        android:includeFontPadding="false" />
 </LinearLayout>

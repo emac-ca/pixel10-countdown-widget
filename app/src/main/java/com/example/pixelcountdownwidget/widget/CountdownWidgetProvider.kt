@@ -3,6 +3,7 @@ package com.example.pixelcountdownwidget.widget
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.util.TypedValue
 import android.widget.RemoteViews
 import com.example.pixelcountdownwidget.PixelCountdownApp
 import com.example.pixelcountdownwidget.R
@@ -28,13 +29,32 @@ class CountdownWidgetProvider : AppWidgetProvider() {
         }
 
         appWidgetIds.forEach { appWidgetId ->
+            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 72)
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 72)
+
+            val textSize = when {
+                minWidth < 90 || minHeight < 90 -> 9f
+                minWidth < 140 || minHeight < 110 -> 11f
+                minWidth < 200 || minHeight < 150 -> 13f
+                else -> 15f
+            }
+
             val views = RemoteViews(context.packageName, R.layout.widget_countdown)
+            views.setTextViewTextSize(R.id.widget_label, TypedValue.COMPLEX_UNIT_SP, textSize)
+            views.setTextViewTextSize(R.id.widget_time, TypedValue.COMPLEX_UNIT_SP, textSize)
 
             if (selectedTimers.isEmpty()) {
                 views.setTextViewText(R.id.widget_label, "No timers")
                 views.setTextViewText(R.id.widget_time, "--")
             } else {
-                val summary = selectedTimers.take(3).joinToString("\n") { timer ->
+                val visibleTimers = when {
+                    minWidth < 110 || minHeight < 100 -> selectedTimers.take(1)
+                    minWidth < 180 || minHeight < 130 -> selectedTimers.take(2)
+                    else -> selectedTimers.take(3)
+                }
+
+                val summary = visibleTimers.joinToString("\n") { timer ->
                     "${timer.label}: ${formatTimerValue(timer)}"
                 }
 
